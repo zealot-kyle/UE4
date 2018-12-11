@@ -1,0 +1,82 @@
+
+特效：
+    Beam连线：
+    ParticleComp->SetBeamSourcePoint(0, SourceLocation, 0);
+    ParticleComp->SetBeamTargetPoint(0, TargetLocation, 0);
+
+获取时间：
+    //FString TempTime = FDateTime::UtcNow().ToString();
+    FString TempTime = FDateTime::Now().ToString();
+
+Spline:
+
+沿曲线运动的物体曲线坐标赋值
+
+    FVector Offset;
+    Offset = OrignalRoute->GetRightVectorAtSplineInputKey(TempPoint.InputKey, ESplineCoordinateSpace::World).GetSafeNormal() * LocalOffset.X
+    + OrignalRoute->GetDirectionAtSplineInputKey(TempPoint.InputKey, ESplineCoordinateSpace::World).GetSafeNormal() * LocalOffset.Y
+    + OrignalRoute->GetUpVectorAtSplineInputKey(TempPoint.InputKey, ESplineCoordinateSpace::World).GetSafeNormal() * LocalOffset.Z;
+    TargetPoint.Position = TempPoint.Position - Offset;
+
+Timeline代码化:
+
+	FOnTimelineFloat OnTimeLineUpdate;
+	FOnTimelineEvent OnTimelineFinishedCallback;
+
+	MovementTimeline->SetLooping(false);
+	MovementTimeline->SetTimelineLengthMode(ETimelineLengthMode::TL_LastKeyFrame);
+	MovementTimeline->SetPlaybackPosition(0.f, false, false);
+
+	OnTimeLineUpdate.BindUFunction(this, FName("UpdateSplineMovement"));
+	OnTimelineFinishedCallback.BindUFunction(this, FName("HandleMovementDone"));
+	MovementTimeline->SetTimelineFinishedFunc(OnTimelineFinishedCallback);
+	MovementTimeline->RegisterComponent();
+
+
+	MovementTimeline->AddInterpFloat(FloatCurve, OnTimeLineUpdate);
+	MovementTimeline->SetTimelineLength(CurveTime);
+
+Math:
+
+判断目标是否在此Actor左边
+bool UBS_BlueprintFunctionLibrary::IsInLeftOfActor(AActor* Self, AActor* Target)
+{
+	if (Self == nullptr || Target == nullptr)
+	{
+		return false;
+	}
+
+	return FVector::DotProduct(Self->GetRootComponent()->GetRightVector(), (Target->GetActorLocation() - Self->GetActorLocation()).GetSafeNormal()) <= 0;
+}
+
+RandomPointInSphereSector
+
+	float u = FMath::RandRange(0.0f, 1.0f);
+	float v = FMath::RandRange(0.0f, 1.0f);
+
+	float theta = PI * (2 * u - 1);
+	float phi = FMath::Acos(2 * v - 1);
+
+	if (ThetaLimit != 0)
+	{
+		theta = FMath::Fmod(theta, ThetaLimit);
+	}
+	if (PhiLimit != 0)
+	{
+		phi = FMath::Fmod(phi, PhiLimit);
+	}
+
+	float x = Origin.X + (Radius * FMath::Sin(phi) * FMath::Cos(theta));
+	float y = Origin.Y + (Radius * FMath::Sin(phi) * FMath::Sin(theta));
+	float z = Origin.Z + (Radius * FMath::Cos(phi));
+
+	return FVector(x, y, z);
+
+Animation:
+根据方向播放Montage中的受击动画：
+
+	FVector ImpactPoint = HitInfo.ImpactPoint;
+	FTransform WorldToComponentTransform = GetRootComponent()->GetComponentToWorld().Inverse();
+	ImpactPoint = WorldToComponentTransform.TransformPosition(ImpactPoint);
+	FName HitSectoinName = (ImpactPoint.Y > 0) ? HitSectionNameLeft : HitSectionNameRight;
+	AnimInstance->Montage_JumpToSection(HitSectoinName, HitAnim);

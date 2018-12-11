@@ -1,0 +1,27 @@
+void ABSNGatlinGun::SetFocusOnGame()
+{
+	FString WindowName = "BS_Gatlin";
+	HWND MyHwnd = FindWindow(NULL, *WindowName);
+
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, WindowName);
+	GEngine->AddOnScreenDebugMessage(-1, 15.f, FColor::White, FString::Printf(TEXT("MyHwnd: %d"), MyHwnd));
+	if (MyHwnd == NULL)
+	{
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("MyHwnd: %d"), MyHwnd);
+
+	::SetActiveWindow(MyHwnd);
+	ShowWindow(MyHwnd, SW_SHOWNORMAL);
+	::uint32 dwCurID = ::GetWindowThreadProcessId(::GetForegroundWindow(), NULL);
+	::AttachThreadInput(dwCurID, ::GetCurrentThreadId(), true);
+	::SetForegroundWindow(MyHwnd);
+	::AttachThreadInput(dwCurID, ::GetCurrentThreadId(), false);
+}
+
+
+::PostMessage()
+::ProcessMessage()
+
+(FWindowsApplication*)FSlateApplication::Get().GetPlatformApplication().Get()
